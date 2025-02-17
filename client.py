@@ -1,7 +1,7 @@
 import socket
 
 s = socket.socket()
-s.connect(('127.0.0.1', 2222))
+s.connect(('127.0.0.1', 1111))
 
 while True:
     user_input = input("S: ")
