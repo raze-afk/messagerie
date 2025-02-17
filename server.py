@@ -1,19 +1,23 @@
 import socket
 
+s = socket.socket()
+port = 2222
+s.bind(('127.0.0.1', port))
+s.listen()
+print("Socket Up and running")
 
-HOST = "127.0.0.1"
-PORT = 2222
+c, addr = s.accept()
+print("Connection from", addr)
 
+while True:
+    rcvdData = c.recv(1024).decode()
+    print("S:", rcvdData)
 
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    s.bind((HOST, PORT))
-    s.listen()
-    conn, addr = s.accept()
-    with conn:
-        print(f"Connected by {addr}")
-        while True:
-            data = conn.recv(1024)
-            if not data:
-                break
-            print(data.decode())
-            conn.sendall(data)
+    sendData = input("N: ")
+    c.send(sendData.encode())
+
+    if sendData == "Bye" or sendData == "bye":
+        break
+
+c.close()
+
