@@ -27,7 +27,7 @@ def broadcast(msg, sender_socket):
                 client.close()
                 clients.remove(client)
 
-def start_server(host='0.0.0.0', port=5555):
+def start_server(host='0.0.0.0', port=1111):
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((host, port))
     server.listen(5)
