@@ -1,16 +1,25 @@
 import socket
+import threading
 
-s = socket.socket()
-s.connect(('127.0.0.1', 1111))
+def receive_messages(client_socket):
+    while True:
+        try:
+            msg = client_socket.recv(1024).decode()
+            if not msg:
+                break
+            print("\nMessage reçu:", msg)
+        except:
+            break
 
-while True:
-    user_input = input("S: ")
-    s.send(user_input.encode())
+def start_client(host='127.0.0.1', port=5555):
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect((host, port))
 
-    if user_input == "Bye" or user_input == "bye":
-        break
+    threading.Thread(target=receive_messages, args=(client_socket,)).start()
 
-    print("N:", s.recv(1024).decode())
+    while True:
+        msg = input("Vous: ")
+        client_socket.send(msg.encode())
 
-s.close()
-
+if __name__ == "__main__":
+    start_client()
