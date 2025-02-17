@@ -1,23 +1,42 @@
 import socket
+import threading
 
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    port = 1111
-    s.bind(('127.0.0.1', port))
-    s.listen()
-    print("Socket Up and running")
+clients = []
 
-    c, addr = s.accept()
-    print("Connection from", addr)
+def handle_client(client_socket, addr):
+    print(f"[+] Nouvelle connexion : {addr}")
+    while True:
+        try:
+            msg = client_socket.recv(1024).decode()
+            if not msg:
+                break
+            print(f"[{addr}] {msg}")
+            broadcast(msg, client_socket)
+        except:
+            break
+    print(f"[-] Déconnexion : {addr}")
+    clients.remove(client_socket)
+    client_socket.close()
+
+def broadcast(msg, sender_socket):
+    for client in clients:
+        if client != sender_socket:
+            try:
+                client.send(msg.encode())
+            except:
+                client.close()
+                clients.remove(client)
+
+def start_server(host='0.0.0.0', port=5555):
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind((host, port))
+    server.listen(5)
+    print(f"[*] Serveur démarré sur {host}:{port}")
 
     while True:
-        rcvdData = c.recv(1024).decode()
-        print("S:", rcvdData)
+        client_socket, addr = server.accept()
+        clients.append(client_socket)
+        threading.Thread(target=handle_client, args=(client_socket, addr)).start()
 
-        sendData = input("N: ")
-        c.send(sendData.encode())
-
-        if sendData == "Bye" or sendData == "bye":
-            break
-
-c.close()
-
+if __name__ == "__main__":
+    start_server()
