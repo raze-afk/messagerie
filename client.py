@@ -36,7 +36,6 @@ def start_client(host='127.0.0.1', port=1111):
                 if msg[i] == cesar[y]:
                     crypt_msg += cesar[(y + key) % 26]
         to_send = str(key) + "#" + crypt_msg
-        print("sender : ", to_send)
         client_socket.send(to_send.encode())
 
 if __name__ == "__main__":
