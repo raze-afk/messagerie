@@ -3,18 +3,18 @@ import threading
 import random
 import string 
 def vigenere_cipher(text, key, encrypt=True):
-    cesar = "abcdefghijklmnopqrstuvwxyz"
+    vige = "abcdefghijklmnopqrstuvwxyz"
     result = ""
     key_index = 0
     
     for char in text:
         if char == " ":
             result += " "
-        elif char in cesar:
-            shift = cesar.index(key[key_index % len(key)])
+        elif char in vige:
+            shift = vige.index(key[key_index % len(key)])
             shift = shift if encrypt else -shift
-            new_index = (cesar.index(char) + shift) % 26
-            result += cesar[new_index]
+            new_index = (vige.index(char) + shift) % 26
+            result += vige[new_index]
             key_index += 1
         else:
             result += char  
