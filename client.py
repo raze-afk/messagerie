@@ -14,6 +14,8 @@ def receive_messages(client_socket):
             msg = msg.split("#")[1]
             decrypt_msg = ""
             for i in range(len(msg)):
+                if msg[i] == " ":
+                    decrypt_msg += " "
                 for y in range(len(cesar)):
                     if msg[i] == cesar[y]:
                         decrypt_msg += cesar[(y - key) % 26]
@@ -32,10 +34,13 @@ def start_client(host='127.0.0.1', port=1111):
         key = random.randint(2,25)
         crypt_msg = ""
         for i in range(len(msg)):
+            if msg[i] == " ":
+                crypt_msg += " "
             for y in range(len(cesar)):
                 if msg[i] == cesar[y]:
                     crypt_msg += cesar[(y + key) % 26]
         to_send = str(key) + "#" + crypt_msg
+        print("sender : ", to_send)
         client_socket.send(to_send.encode())
 
 if __name__ == "__main__":
