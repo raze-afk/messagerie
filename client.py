@@ -1,31 +1,39 @@
 import socket
 import threading
-import random
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.backends import default_backend
+import base64
 
-def cesar_cipher(text, key, encrypt=True):
-    cesar = "abcdefghijklmnopqrstuvwxyz"
-    result = ""
-    shift = key if encrypt else -key
-    
-    for char in text:
-        if char == " ":
-            result += " "
-        elif char in cesar:
-            new_index = (cesar.index(char) + shift) % 26
-            result += cesar[new_index]
-        else:
-            result += char 
-    
-    return result
+AES_KEY = b'5t8MVNIi199RlALz' 
+AES_IV = b't3q2Orv4tjm9QY9d'  
+
+def encrypt_aes(plaintext):
+    cipher = Cipher(algorithms.AES(AES_KEY), modes.CBC(AES_IV), backend=default_backend())
+    encryptor = cipher.encryptor()
+    padder = padding.PKCS7(128).padder()  
+    padded_plaintext = padder.update(plaintext.encode()) + padder.finalize()
+    ciphertext = encryptor.update(padded_plaintext) + encryptor.finalize()
+    return base64.b64encode(ciphertext).decode()
+
+def decrypt_aes(ciphertext):
+    ciphertext = base64.b64decode(ciphertext)  
+    cipher = Cipher(algorithms.AES(AES_KEY), modes.CBC(AES_IV), backend=default_backend())
+    decryptor = cipher.decryptor()
+    padded_plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+    unpadder = padding.PKCS7(128).unpadder()
+    plaintext = unpadder.update(padded_plaintext) + unpadder.finalize()
+    return plaintext.decode()
 
 def receive_messages(client_socket):
+
     while True:
         try:
             msg = client_socket.recv(1024).decode()
             if not msg:
+
                 break
-            key, encrypted_msg = msg.split("#", 1)
-            decrypt_msg = cesar_cipher(encrypted_msg, int(key), encrypt=False)
+            decrypt_msg = decrypt_aes(msg)
             print("\nMessage reçu:", decrypt_msg)            
         except:
             break
@@ -38,11 +46,8 @@ def start_client(host='127.0.0.1', port=1111):
     
     while True:
         msg = input("Vous: ")
-        key = random.randint(2, 25)
-        encrypted_msg = cesar_cipher(msg, key)
-        to_send = f"{key}#{encrypted_msg}"
-        print("Sender:", to_send)
-        client_socket.send(to_send.encode())
+        encrypted_msg = encrypt_aes(msg)
+        client_socket.send(encrypted_msg.encode())
 
 if __name__ == "__main__":
     start_client()
