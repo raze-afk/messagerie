@@ -1,48 +1,90 @@
 import socket
 import threading
-import random
+import base64
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives import serialization, hashes
 
-def cesar_cipher(text, key, encrypt=True):
-    cesar = "abcdefghijklmnopqrstuvwxyz"
-    result = ""
-    shift = key if encrypt else -key
-    
-    for char in text:
-        if char == " ":
-            result += " "
-        elif char in cesar:
-            new_index = (cesar.index(char) + shift) % 26
-            result += cesar[new_index]
-        else:
-            result += char 
-    
-    return result
+def generate_keys():
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048
+    )
+    public_key = private_key.public_key()
+    return private_key, public_key
+
+private_key, public_key = generate_keys()
+
+def public_key_to_base64(public_key):
+    pem = public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+    return base64.b64encode(pem).decode()
+
+def encrypt_rsa(text, public_key):
+    ciphertext = public_key.encrypt(
+        text.encode(),
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+    return base64.b64encode(ciphertext).decode()
+
+def decrypt_rsa(ciphertext, private_key):
+    ciphertext_bytes = base64.b64decode(ciphertext)
+    plaintext = private_key.decrypt(
+        ciphertext_bytes,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+    return plaintext.decode()
+
+SENDER_PUBLIC = None
 
 def receive_messages(client_socket):
+    global SENDER_PUBLIC
     while True:
         try:
-            msg = client_socket.recv(1024).decode()
+            msg = client_socket.recv(1024).decode()  
             if not msg:
                 break
-            key, encrypted_msg = msg.split("#", 1)
-            decrypt_msg = cesar_cipher(encrypted_msg, int(key), encrypt=False)
-            print("\nMessage reçu:", decrypt_msg)            
-        except:
+
+            if msg[:11] == "PUBLIC_KEY:":
+                PKEY64 = base64.b64decode(msg.split("PUBLIC_KEY:")[1])
+                SENDER_PUBLIC = serialization.load_pem_public_key(PKEY64)
+                print("Received public key.")
+            else:
+                decrypt_msg = decrypt_rsa(msg, private_key)
+                print("\nMessage reçu:", decrypt_msg)
+
+        except Exception as e:
+            print(f"Error: {e}")
             break
 
 def start_client(host='127.0.0.1', port=1111):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((host, port))
-    
+
     threading.Thread(target=receive_messages, args=(client_socket,)).start()
-    
+
+  
+    choice = input("Press :\n1: Send Public key.\n-> :")
+    if choice == "1":
+        pem = public_key_to_base64(public_key)
+        client_socket.send(("PUBLIC_KEY:" + pem).encode())  # Send public key
+
     while True:
         msg = input("Vous: ")
-        key = random.randint(2, 25)
-        encrypted_msg = cesar_cipher(msg, key)
-        to_send = f"{key}#{encrypted_msg}"
-        print("Sender:", to_send)
-        client_socket.send(to_send.encode())
+        if SENDER_PUBLIC:
+            encrypted_msg = encrypt_rsa(msg, SENDER_PUBLIC)  
+            client_socket.send(encrypted_msg.encode())  
+        else:
+            print("Public key not received yet, waiting...")
 
 if __name__ == "__main__":
     start_client()
